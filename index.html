@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+#center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+model-viewer{
+  width: 70vw;
+  height:70vh;
+}
+</style>
+
+<style>
+<style>
+  /* This keeps child nodes hidden while the element loads */
+  :not(:defined) > * {
+    display: none;
+  }
+
+  model-viewer {
+    background-color: #eee;
+    overflow-x: hidden;
+  }
+
+  #ar-button {
+    background-image: url(https://modelviewer.dev/assets/ic_view_in_ar_new_googblue_48dp.png);
+    background-repeat: no-repeat;
+    background-size: 40px 40px;
+    background-position: 24px 50%;
+    background-color: #fff;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    bottom: 10%;
+    padding: 0px 32px 0px 80px;
+    font-family: Roboto Regular, Helvetica Neue, sans-serif;
+    font-size: 28px;
+    color:#4285f4;
+    height: 72px;
+    line-height: 72px;
+    border-radius: 36px;
+    border: 1px solid #DADCE0;
+  }
+
+  #ar-button:active {
+    background-color: #E8EAED;
+  }
+
+  #ar-button:focus {
+    outline: none;
+  }
+
+  #ar-button:focus-visible {
+    outline: 1px solid #4285f4;
+  }
+</style>
+
+</head>
+<body id="center">
+
+<div>
+
+
+<!-- ES-Shims for older browsers -->
+<script async src="https://ga.jspm.io/npm:es-module-shims@1.7.1/dist/es-module-shims.js"></script>
+
+<!-- Import Three.js using an import-map -->
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@^0.154.0/build/three.module.min.js"
+    }
+  }
+</script>
+
+<!-- Import the <model-viewer> component without three bundled -->
+<script type="module" src="https://modelviewer.dev/node_modules/@google/model-viewer/dist/model-viewer-module.min.js"></script>
+
+<!-- Import the <model-viewer-effects> addon -->
+<script type="module" src="https://modelviewer.dev/node_modules/@google/model-viewer-effects/dist/model-viewer-effects.min.js"></script>
+
+<!-- Use it like any other HTML element -->
+<model-viewer camera-controls touch-action="pan-y" autoplay src="./RobotExpressive.glb" ar alt="A 3D model of a Lantern">
+  <effect-composer id="customComposer" msaa="8">
+  </effect-composer>
+  <div class="controls">
+    <label for="scale">Grid Scale</label>
+    <input id="scale" type="range" min="0" max="2" step="0.01" value="1">
+  </div>
+</model-viewer>
+<script type="module">
+  // import * as PostProcessing from 'https://cdn.jsdelivr.net/npm/postprocessing@6.30.1/build/postprocessing.esm.js';
+  import * as PostProcessing from './postprocessing.esm.js';
+  const customComposer = document.querySelector("effect-composer#customComposer");
+
+  const grid = new PostProcessing.GridEffect();
+  const sepia = new PostProcessing.SepiaEffect();
+  // The camera is set automatically when added to the <effect-composer>
+  const noisePass = new PostProcessing.EffectPass(undefined, grid, sepia);
+  // customComposer.addPass(noisePass);
+
+  ///////////////////////////////////////////////////////////////////////////////
+  import {ShaderPass} from 'https://cdn.jsdelivr.net/npm/three@0.122/examples/jsm/postprocessing/ShaderPass.js';
+  import {GlitchPass} from 'https://cdn.jsdelivr.net/npm/three@0.122/examples/jsm/postprocessing/GlitchPass.js';
+  import * as NewGlitchEffect from './CustomEffect.js';
+
+
+  const _VS = `
+  varying vec2 vUv;
+
+  void main() {
+    gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+    vUv = uv;
+  }
+  `;
+
+  const _FS = `
+  #include <common>
+
+  uniform sampler2D tDiffuse;
+
+  varying vec2 vUv;
+
+  void main() {
+    vec4 diffuse = texture2D(tDiffuse, vUv);
+
+    gl_FragColor = (diffuse - 0.5) * 4.0 + 0.5;
+  }
+  `;
+
+  const CrapShader = {
+    uniforms: {
+      tDiffuse: null,
+    },
+    vertexShader: _VS,
+    fragmentShader: _FS,
+  };
+
+  const glitch = new PostProcessing.GlitchEffect();
+  const newGlitch = new NewGlitchEffect.NewGlitchEffect();
+  customComposer.addPass(new PostProcessing.EffectPass(undefined, glitch, newGlitch)); //, grid, sepia));
+
+  ///////////////////////////////////////////////////////////////////////////////
+
+  customComposer.nextElementSibling.addEventListener('input', (e) => {
+    grid.scale = e.target.value;
+    // Request a render frame, to update
+    customComposer.queueRender();
+  });
+
+
+  
+
+</script>
+
+</div>
+
+</body>
+</html>
